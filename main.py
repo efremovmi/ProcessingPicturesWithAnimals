@@ -1,157 +1,170 @@
+from NN import NN
+
 import PySimpleGUI as sg
 import ctypes
 import Progress as pr
-import shutil
+import tkinter
+
 import os
-from OpenCV import NN
+import shutil
 
-layout = [[sg.Text('Выберите, откуда читать данные(архив или папка):')],
-          [sg.Radio('Архив', "RADIO1", default=False, key="Archive"),
-           sg.Input(size=(100, 1), key="InputPathToArchive"), sg.FileBrowse(button_text='Выбрать файл')],
-          [sg.Radio('Папка', "RADIO1", default=True, key="Folder"),
-           sg.Input(size=(100, 1), key="InputPathToFolder"), sg.FolderBrowse(button_text='Выбрать папку')],
+import patoolib
+import zipfile
 
-          [sg.Text('Место выгрузки обработанных фотографий:')],
-          [sg.Input(do_not_clear=True, size=(111, 1)), sg.FolderBrowse(button_text='Выбрать папку')],
-          [sg.Button('Начать обработку', button_color=('white', 'green')),  sg.Button('Выход')]]
+tkinter.Tk().withdraw()
+
+button1 = sg.Input(size=(80, 1), key="InputPath")
+button2 = sg.Input(size=(80, 1), key="OutputPath")
+
+layout = [[button1], [sg.Button('Брать из папки'), sg.Button('Брать из архива')],
+           [sg.Text('Место выгрузки обработанных фотографий:')],
+           [button2], [sg.Button('  Выбрать папку выгрузки   ')],
+           [sg.Button('Начать обработку', button_color=('white', 'green')), sg.Button('Выход', button_color=('white', 'red'))]]
+
+window = sg.Window('Обработка фотографий', layout, size=(450, 180))
 
 
-window = sg.Window('Обработка фотографий', size=(950, 200)).Layout(layout).Finalize()
-
-
-ImagePreprocessor = NN()
-
-
+ImagePreprocessor = NN.NN()
+isFolder = True
+InputPathToFolder = ""
+pathToArchive = ""
+path_to_result = ""
 while True:  # Event Loop
-    event, values = window.Read()
-    print(event, values)
+    event, values = window()
+    correct_input = True
 
     if event is None or event == 'Выход':
         break
 
-    # path_to_result = values['Выбрать папку0']
-    path_to_result = 'C:/Users/genri/Desktop/WildHack/Result'
-    if len(path_to_result) == 0:
-        ctypes.windll.user32.MessageBoxW(0, "Вы не выбрали путь до места выгрузки", "Ошибка", 0)
+    if event == 'Брать из папки' or event == 'Брать из папки0':
+        button1.Update(value=tkinter.filedialog.askdirectory())
+        isFolder = True
         continue
 
+    if event == 'Брать из архива' or event == 'Брать из архива1':
+        button1.Update(value=tkinter.filedialog.askopenfilename())
+        isFolder = False
+        continue
+
+    if event == '  Выбрать папку выгрузки   ':
+        button2.Update(value=tkinter.filedialog.askdirectory())
+        continue
+
+
     if event is None or event == 'Начать обработку':
+        if isFolder:
+            InputPathToFolder = values["InputPath"]
+        else:
+            pathToArchive = values["InputPath"]
+
+        path_to_result = values["OutputPath"]
+        if len(path_to_result)  == 0:
+            ctypes.windll.user32.MessageBoxW(0, "Вы не выбрали путь до места выгрузки", "Ошибка", 0)
+
+            continue
 
         # Архив
-        if values["Archive"]:
-            pathToArchive = values["InputPathToArchive"]
+        if not isFolder:
+            pathToArchive = values["InputPath"]
             last = pathToArchive[-4:]
 
             if len(pathToArchive) == 0:
                 ctypes.windll.user32.MessageBoxW(0, "Вы не выбрали архив", "Ошибка", 0)
+                correct_input = False
 
-            elif last != ".zip" and last != ".rar":
+            elif last == ".rar":
+                if not os.path.exists(pathToArchive[:-4]):
+                    os.mkdir(pathToArchive[:-4])
+                patoolib.extract_archive(pathToArchive, outdir=pathToArchive[:-4])
+                InputPathToFolder = pathToArchive[:-4]
+
+            elif last == '.zip':
+                animalZip = zipfile.ZipFile(pathToArchive)
+                animalZip.extractall(pathToArchive[:-4])
+                animalZip.close()
+                InputPathToFolder = pathToArchive[:-4]
+
+            else:
                 ctypes.windll.user32.MessageBoxW(0, "Формат архива должен быть rar или zip", "Ошибка", 0)
-
-            else:
-                # ======================================================================================================
-                # Здесь обработка архива
-                #
-
-                countImages = 1000
-                for i in range(countImages):
-                    #
-
-                    #
-                    if not pr.OneLineProgressMeter('Обработка:',
-                                                      i + 1, countImages,
-                                                      'Обработано фотографий',
-                                                      orientation='h',
-                                                      # no_titlebar=True,
-                                                      # grab_anywhere=True,
-                                                      bar_color=('white', 'red'),
-                                                      ):
-                        break
-
-
-                if i == countImages - 1:
-                    # Обработка завершена.
-                    # Результаты.
-                    ctypes.windll.user32.MessageBoxW(0, "Обработка закончена!",
-                                                 "Сообщение", 0)
-                else:
-                    ctypes.windll.user32.MessageBoxW(0, "Вы отменили обработку.",
-                                                     "Ошибка", 0)
-                # ======================================================================================================
-
-
-
-        # Папка
-        if values["Folder"]:
-            print(values)
-            # InputPathToFolder = values["InputPathToFolder"]
-            InputPathToFolder = 'C:/Users/genri/Desktop/WildHack/Фото/1'
-
+                correct_input = False
+        else:
             if len(InputPathToFolder) == 0:
-                print(1)
                 ctypes.windll.user32.MessageBoxW(0, "Вы не выбрали папку", "Ошибка", 0)
+                correct_input = False
 
 
-            else:
-                # ======================================================================================================
-                # Здесь обработка папки
-                #
-
-                if not os.path.exists(os.path.join(path_to_result, 'Есть Животные')):
-                    os.mkdir(os.path.join(path_to_result, 'Есть Животные'))
+        if correct_input:
+        # ==============================================================================================================
 
 
-                if not os.path.exists(os.path.join(path_to_result, 'Нет Животных')):
-                    os.mkdir(os.path.join(path_to_result, 'Нет Животных'))
+            if not os.path.exists(os.path.join(path_to_result, 'Есть Животные')):
+                os.mkdir(os.path.join(path_to_result, 'Есть Животные'))
 
 
-
-                imagesList = os.listdir(InputPathToFolder)
-
-                countImages = len(imagesList)
-
-                i = 0
-                countGod = 0
-                countBed = 0
-
-                break_i = 0
-                for name in imagesList:
+            if not os.path.exists(os.path.join(path_to_result, 'Нет Животных')):
+                os.mkdir(os.path.join(path_to_result, 'Нет Животных'))
 
 
-                    if name[-4:].casefold() == ".png" or name[-4:].casefold() == ".jpg" or name[-5:].casefold() == ".jpeg":
-                        if ImagePreprocessor.ProcessImage(os.path.join(InputPathToFolder, name)):
+            countImages = 0
+            for top, dirs, files in os.walk(InputPathToFolder):
+                for nm in files:
+                    countImages += 1
+
+
+            i = 0
+            countGod = 0
+            countBed = 0
+
+            break_i = 0
+            exitFlag = False
+            print(InputPathToFolder)
+            for top, dirs, files in os.walk(InputPathToFolder):
+                if exitFlag:
+                    break
+
+                for nm in files:
+                    if os.path.join(top, nm)[-4:].casefold() == ".png" or os.path.join(top, nm)[-4:].casefold() == ".jpg" or \
+                            os.path.join(top, nm)[-5:].casefold() == ".jpeg":
+
+
+                        flag = ImagePreprocessor.ProcessImage(os.path.join(top, nm))
+                        if flag:
                             countGod += 1
-                            # shutil.move(os.path.join(InputPathToFolder, name), os.path.join(path_to_result, 'Есть Животные') )
-                            shutil.copy(os.path.join(InputPathToFolder, name), os.path.join(path_to_result, 'Есть Животные') )
+                            if not os.path.exists(os.path.join(path_to_result, 'Есть Животные', nm)):
+                                shutil.move(os.path.join(top, nm), os.path.join(path_to_result, 'Есть Животные') )
+                            #shutil.copy(os.path.join(top, nm),
+                            #            os.path.join(path_to_result, 'Есть Животные'))
+
                         else:
                             countBed += 1
-                            # shutil.move( os.path.join(InputPathToFolder, name), os.path.join(path_to_result, 'Нет Животных'))
-                            shutil.copy(os.path.join(InputPathToFolder, name), os.path.join(path_to_result, 'Нет Животных') )
+                            if not os.path.exists(os.path.join(path_to_result, 'Нет Животных', nm)):
+                                shutil.move(os.path.join(top, nm), os.path.join(path_to_result, 'Нет Животных'))
+                            #shutil.copy(os.path.join(top, nm),
+                            #            os.path.join(path_to_result, 'Нет Животных'))
 
 
+                        if not pr.OneLineProgressMeter('Обработка:',
+                                                       i + 1, countImages,
+                                                       'Обраматываемая фотография:',
+                                                       'Обработано фотографий:',
+                                                       orientation='h',
+                                                       bar_color=('white', 'red'),
+                                                       ):
+                            exitFlag = True
+                            break
 
-                    if not pr.OneLineProgressMeter('Обработка:',
-                                                   i + 1, countImages,
-                                                   'Обраматываемая фотография:',
-                                                   'Обработано фотографий:',
-                                                   orientation='h',
-                                                   # no_titlebar=True,
-                                                   # grab_anywhere=True,
-                                                   bar_color=('white', 'red'),
-                                                   ):
-                        break
+                        i += 1
 
-                    i += 1
-                if i == countImages - 1:
-                    # Обработка завершена.
-                    # Результаты.
-                    ctypes.windll.user32.MessageBoxW(0, "Обработка закончена!\nКоличество фотографий с животными: {}\n"
-                                                        "Количество фотографий без животных: {}".format(countGod, countBed),
-                                                     "Сообщение", 0)
-                else:
-                    ctypes.windll.user32.MessageBoxW(0, "Вы отменили обработку.",
-                                                     "Ошибка", 0)
-                # ======================================================================================================
-
-
-
+            if i == countImages - 1:
+                # Processing end
+                # Output results
+                ctypes.windll.user32.MessageBoxW(0, "Обработка закончена!\nКоличество фотографий с животными: {}\n"
+                                                    "Количество фотографий без животных: {}".format(countGod, countBed),
+                                                    "Сообщение", 0)
+            else:
+                ctypes.windll.user32.MessageBoxW(0, "Вы отменили обработку.\nКоличество фотографий с животными: {}\n"
+                                                    "Количество фотографий без животных: {}".format(countGod, countBed),
+                                                    "Ошибка", 0)
+        # ======================================================================================================
+        if not isFolder:
+            shutil.rmtree(pathToArchive[:-4])
