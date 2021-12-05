@@ -2,17 +2,25 @@ import cv2
 import numpy as np
 import time
 import os
+import sys
 
-class NN():
+class neuralnetwork():
     def __init__(self):
         self.CONFIDENCE = 0.001
         self.SCORE_THRESHOLD = 0.001
         self.IOU_THRESHOLD = 0.001
 
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+
+        path = os.path.join(base_path, './nn')
+
         # the neural network configuration
-        self.config_path = "nn/yolov4.cfg"
+        self.config_path = os.path.join(path, "yolov4.cfg")
         # the YOLO net weights file
-        self.weights_path = "nn/yolov4.weights"
+        self.weights_path = os.path.join(path, "yolov4.weights")
 
         # load the YOLO network
         self.net = cv2.dnn.readNetFromDarknet(self.config_path, self.weights_path)

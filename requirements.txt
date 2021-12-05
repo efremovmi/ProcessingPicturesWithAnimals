@@ -1,0 +1,5 @@
+opencv-python==4.5.4.60
+numpy==1.21.4
+PySimpleGUI==4.55.1
+patool==1.12
+PySimpleGUIQt==0.35.0

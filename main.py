@@ -1,4 +1,4 @@
-from NN import NN
+from NN import neuralnetwork
 
 import PySimpleGUI as sg
 import ctypes
@@ -8,7 +8,6 @@ import tkinter
 import os
 import shutil
 
-import patoolib
 import zipfile
 
 tkinter.Tk().withdraw()
@@ -24,7 +23,7 @@ layout = [[button1], [sg.Button('Брать из папки'), sg.Button('Бра
 window = sg.Window('Обработка фотографий', layout, size=(450, 180))
 
 
-ImagePreprocessor = NN.NN()
+ImagePreprocessor = neuralnetwork()
 isFolder = True
 InputPathToFolder = ""
 pathToArchive = ""
@@ -72,12 +71,6 @@ while True:  # Event Loop
                 ctypes.windll.user32.MessageBoxW(0, "Вы не выбрали архив", "Ошибка", 0)
                 correct_input = False
 
-            elif last == ".rar":
-                if not os.path.exists(pathToArchive[:-4]):
-                    os.mkdir(pathToArchive[:-4])
-                patoolib.extract_archive(pathToArchive, outdir=pathToArchive[:-4])
-                InputPathToFolder = pathToArchive[:-4]
-
             elif last == '.zip':
                 animalZip = zipfile.ZipFile(pathToArchive)
                 animalZip.extractall(pathToArchive[:-4])
@@ -85,7 +78,7 @@ while True:  # Event Loop
                 InputPathToFolder = pathToArchive[:-4]
 
             else:
-                ctypes.windll.user32.MessageBoxW(0, "Формат архива должен быть rar или zip", "Ошибка", 0)
+                ctypes.windll.user32.MessageBoxW(0, "Формат архива должен быть zip", "Ошибка", 0)
                 correct_input = False
         else:
             if len(InputPathToFolder) == 0:
